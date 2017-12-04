@@ -45,10 +45,15 @@ class Solver(object):
         self.storage = pd.DataFrame(data=_storage_dict, index=[])
 
     def solve_eq(self):
-        time = self.solving_algorithm.initial_time
-        while time <= self.te:
-            time, values = self.solving_algorithm.single_point_calcs()
-            self.storage.loc[time] = values
+        values = self.solving_algorithm.initial_values
+        real_time = init_time = self.solving_algorithm.initial_time
+        last_time = 0
+        while real_time <= self.te:
+            last_time, values = \
+                self.solving_algorithm.single_point_calcs(values, last_time)
+            real_time = init_time + timedelta(seconds=last_time)
+
+            self.storage.loc[real_time] = values
 
     def get_storage(self):
         return self.storage
@@ -59,7 +64,7 @@ class EulersMethod(object):
             self, initial_values, initial_time, df_dt, dt, dim_names='y'):
         """Initiate Euler's integration method"""
         # t0, y0 dt available here, number of iterations/end time not
-        self.last_values = initial_values
+        self.initial_values = initial_values
         self.dim_names = dim_names
         self.set_proper_times(initial_time, dt)
 
@@ -85,21 +90,25 @@ class EulersMethod(object):
             self.dt_dt = dt
             self.dt.total_seconds()
 
-    def single_point_calcs(self):
+    def single_point_calcs(
+            self, last_values, last_time,
+            dt_multiplier=1, df_dt=None):
         # the approximating function
         # f(t1) = f(t0) + dt * df_dt(last_val, last_time)
         # if it's multivariate approximation other procedure should be used
-        if isinstance(self.last_values, numbers.Number):
-            self.last_values += self.dt * \
-                               self.k1(self.last_values, self.last_time)
-            self.last_time += self.dt
+        if df_dt:
+            df_dt_used = df_dt
+        else:
+            df_dt_used = self.k1
+
+        if isinstance(last_values, numbers.Number):
+            last_values += dt_multiplier * self.dt * \
+                               df_dt_used(last_values, last_time)
+            last_time += dt_multiplier * self.dt
         else:
             pass
-
-        # swap time to proper time (datetime + initial val)
-        cur_time = self.initial_time + timedelta(seconds=self.last_time)
         # return calculated tuple
-        return (cur_time, self.last_values)
+        return (last_time, last_values)
 
 
 class RK4(EulersMethod):
@@ -115,8 +124,8 @@ if __name__ == '__main__':
     plain_euler = EulersMethod(
         initial_values=5,
         initial_time=time.time(),
-        df_dt=lambda last_value, time: last_value,
+        df_dt=lambda last_value, time: -2*last_value,
         dt=0.1)
-    simple_solver = Solver(plain_euler, time.time() + 160)
+    simple_solver = Solver(plain_euler, time.time() + 20)
     simple_solver.solve_eq()
     print simple_solver.get_storage()
