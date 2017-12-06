@@ -33,7 +33,7 @@ class Solver(object):
         self._spawn_storage()
 
     def _spawn_storage(self, dim_names='y'):
-        """Spawning storage with given names"""
+        """Spawning storage with given variable names"""
         _storage_dict = {}
 
         if not isinstance(dim_names, list):
@@ -50,7 +50,10 @@ class Solver(object):
         last_time = 0
         while real_time <= self.te:
             last_time, values = \
-                self.solving_algorithm.single_point_calcs(values, last_time)
+                self.solving_algorithm\
+                    .single_point_calcs(values, last_time,
+                                        self.solving_algorithm.k1,
+                                        self.solving_algorithm.dt,)
             real_time = init_time + timedelta(seconds=last_time)
 
             self.storage.loc[real_time] = values
@@ -90,8 +93,9 @@ class EulersMethod(object):
             self.dt_dt = dt
             self.dt.total_seconds()
 
+    @staticmethod
     def single_point_calcs(
-            self, last_values, last_time,
+            last_values, last_time, k1, dt,
             dt_multiplier=1, df_dt=None):
         # the approximating function
         # f(t1) = f(t0) + dt * df_dt(last_val, last_time)
@@ -99,12 +103,12 @@ class EulersMethod(object):
         if df_dt:
             df_dt_used = df_dt
         else:
-            df_dt_used = self.k1
+            df_dt_used = k1
 
         if isinstance(last_values, numbers.Number):
-            last_values += dt_multiplier * self.dt * \
+            last_values += dt_multiplier * dt * \
                                df_dt_used(last_values, last_time)
-            last_time += dt_multiplier * self.dt
+            last_time += dt_multiplier * dt
         else:
             pass
         # return calculated tuple
@@ -112,11 +116,16 @@ class EulersMethod(object):
 
 
 class RK4(EulersMethod):
-    def __init__(self):
-        self.k1 = 0
-        self.k2 = 0
-        self.k3 = 0
-        self.k4 = 0
+    def __init__(self, initial_values, initial_time, df_dt, dt, dim_names='y'):
+        super(RK4, self).\
+            __init__(initial_values, initial_time, df_dt, dt, dim_names)
+        # initializing k values
+        self.k1 = self.k2 = self.k3 = self.k4 = df_dt
+        # getting single point Euler integrator
+        self._euler_single_point_calcs = EulersMethod.single_point_calcs
+
+    def single_point_calcs(self):
+        pass
 
 
 if __name__ == '__main__':
@@ -129,3 +138,8 @@ if __name__ == '__main__':
     simple_solver = Solver(plain_euler, time.time() + 20)
     simple_solver.solve_eq()
     print simple_solver.get_storage()
+
+    RK4(initial_values=5,
+        initial_time=time.time(),
+        df_dt=lambda last_value, time: -2*last_value,
+        dt=0.1)
