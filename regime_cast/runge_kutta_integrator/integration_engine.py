@@ -125,6 +125,13 @@ class RK4(EulersMethod):
         self._euler_single_point_calcs = EulersMethod.single_point_calcs
 
     def single_point_calcs(self):
+        # assign k1 to local var
+        # get the value at dt/2 y1
+        # get k2 = df_dt(dt/2, y1)
+        # get value at dt/2 based on k2 y2
+        # get k3 = df_dt(dt/2, y2)
+        # get value at dt based on k3 y3
+        # get k4 = df_dt(dt/2, y3)
         pass
 
 
