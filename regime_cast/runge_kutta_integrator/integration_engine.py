@@ -129,50 +129,52 @@ class RK4(EulersMethod):
         self._euler_single_point_calcs = EulersMethod.single_point_calcs
 
     def single_point_calcs(self,
-            last_values, last_time, k1, dt,
-            dt_multiplier=1, df_dt=None, vals_only=False):
-        if not df_dt:
-            df_dt = k1
+                           last_values, last_time, k1, dt,
+                           dt_multiplier=1, df_dt=None, vals_only=False):
+        if df_dt:
+            df_dt_used = df_dt
+        else:
+            df_dt_used = k1
+
+        if not isinstance(last_values, numbers.Number):
+            raise ValueError(
+                'The values provided for integration are not of numeric type')
+
         # get k1 value
-        k1_val = df_dt(last_values, last_time)
+        k1_val = df_dt_used(last_values, last_time)
         # set the time for last_values_1 calcs
         last_time_1 = last_time + dt/2
         # get the value at dt/2 y1
         last_values_1 = \
             self._euler_single_point_calcs(
                 last_values, last_time_1,
-                k1=df_dt,
+                k1=df_dt_used,
                 dt=dt/2,
                 vals_only=True)
 
-        # print '{} {}'.format(last_values_1, last_time_1)
-
         # get k2 = df_dt(dt/2, y1)
-        k2_val = df_dt(last_values_1, last_time_1)
+        k2_val = df_dt_used(last_values_1, last_time_1)
         # get value at dt/2 based on k2 y2
         # set time for last_values_2 calcs
         last_time_2 = last_time_1  # same as time for y_1
         last_values_2 = \
             self._euler_single_point_calcs(
                 last_values, last_time_2,
-                k1=df_dt,
+                k1=df_dt_used,
                 dt=dt/2,
                 vals_only=True)
         # get k3 = df_dt(dt/2, y2)
-        k3_val = df_dt(last_values_2, last_time_2)
+        k3_val = df_dt_used(last_values_2, last_time_2)
         # get value at dt based on k3 y3
         last_values_3 = \
             self._euler_single_point_calcs(
                 last_values, last_time,
-                k1=df_dt,
+                k1=df_dt_used,
                 dt=dt,
                 vals_only=True
             )
         # get k4 = df_dt(dt/2, y3)
-        k4_val = df_dt(last_values_3, last_time + dt)
-
-        # print type(last_values)
-        # print '{} {} {} {}'.format(k1_val, k2_val, k3_val, k4_val)
+        k4_val = df_dt_used(last_values_3, last_time + dt)
 
         last_values += \
             dt * (k1_val +
