@@ -96,7 +96,7 @@ class EulersMethod(object):
     @staticmethod
     def single_point_calcs(
             last_values, last_time, k1, dt,
-            dt_multiplier=1, df_dt=None):
+            dt_multiplier=1, df_dt=None, vals_only=False):
         # the approximating function
         # f(t1) = f(t0) + dt * df_dt(last_val, last_time)
         # if it's multivariate approximation other procedure should be used
@@ -111,8 +111,12 @@ class EulersMethod(object):
             last_time += dt_multiplier * dt
         else:
             pass
-        # return calculated tuple
-        return (last_time, last_values)
+
+        # return calculated values or (time, values) tuple
+        if vals_only:
+            return last_values
+        else:
+            return (last_time, last_values)
 
 
 class RK4(EulersMethod):
@@ -124,15 +128,60 @@ class RK4(EulersMethod):
         # getting single point Euler integrator
         self._euler_single_point_calcs = EulersMethod.single_point_calcs
 
-    def single_point_calcs(self):
-        # assign k1 to local var
+    def single_point_calcs(self,
+            last_values, last_time, k1, dt,
+            dt_multiplier=1, df_dt=None, vals_only=False):
+        if not df_dt:
+            df_dt = k1
+        # get k1 value
+        k1_val = df_dt(last_values, last_time)
+        # set the time for last_values_1 calcs
+        last_time_1 = last_time + dt/2
         # get the value at dt/2 y1
+        last_values_1 = \
+            self._euler_single_point_calcs(
+                last_values, last_time_1,
+                k1=df_dt,
+                dt=dt/2,
+                vals_only=True)
+
+        # print '{} {}'.format(last_values_1, last_time_1)
+
         # get k2 = df_dt(dt/2, y1)
+        k2_val = df_dt(last_values_1, last_time_1)
         # get value at dt/2 based on k2 y2
+        # set time for last_values_2 calcs
+        last_time_2 = last_time_1  # same as time for y_1
+        last_values_2 = \
+            self._euler_single_point_calcs(
+                last_values, last_time_2,
+                k1=df_dt,
+                dt=dt/2,
+                vals_only=True)
         # get k3 = df_dt(dt/2, y2)
+        k3_val = df_dt(last_values_2, last_time_2)
         # get value at dt based on k3 y3
+        last_values_3 = \
+            self._euler_single_point_calcs(
+                last_values, last_time,
+                k1=df_dt,
+                dt=dt,
+                vals_only=True
+            )
         # get k4 = df_dt(dt/2, y3)
-        pass
+        k4_val = df_dt(last_values_3, last_time + dt)
+
+        # print type(last_values)
+        # print '{} {} {} {}'.format(k1_val, k2_val, k3_val, k4_val)
+
+        last_values += \
+            dt * (k1_val +
+                  2 * k2_val +
+                  2 * k3_val +
+                  k4_val)/6
+        last_time += dt
+
+        return last_time, last_values
 
 
 if __name__ == '__main__':
@@ -142,11 +191,19 @@ if __name__ == '__main__':
         initial_time=time.time(),
         df_dt=lambda last_value, time: -2*last_value,
         dt=0.1)
-    simple_solver = Solver(plain_euler, time.time() + 20)
-    simple_solver.solve_eq()
-    print simple_solver.get_storage()
 
-    RK4(initial_values=5,
+    rk_4 = RK4(
+        initial_values=5,
         initial_time=time.time(),
-        df_dt=lambda last_value, time: -2*last_value,
+        df_dt=lambda last_value, time: -2 * last_value,
         dt=0.1)
+
+    simple_solver_euler = Solver(plain_euler, time.time() + 2)
+    simple_solver_euler.solve_eq()
+    print 'Euler'
+    print simple_solver_euler.get_storage()
+
+    rk_4_solver = Solver(rk_4, time.time() + 2)
+    rk_4_solver.solve_eq()
+    print 'RK4'
+    print rk_4_solver.get_storage()
