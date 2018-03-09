@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from runge_kutta_integrator.integration_engine import RK4
-from runge_kutta_integrator.integration_engine import Solver
+from ..runge_kutta_integrator.integration_engine import RK4
+from ..runge_kutta_integrator.integration_engine import Solver
 from derivatives import rcast_deriv
 from values_estimators import rcast_estimator
 
